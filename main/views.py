@@ -4,10 +4,12 @@ from django.contrib.auth import authenticate,login,logout
 from django.urls import reverse
 from django.db import IntegrityError
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 
 # Create your views here.
 
 from .models import User,Profile
+@login_required
 def index(request):
     return render(request,"main/index.html")
 
@@ -35,11 +37,9 @@ def signup(request):
             new_user.save()
 
             #log user in and redirect to setting page 
-
-
-         
-
-
+            user = authenticate(request,username=username,password=password)
+            login(request,user)
+            
             #give user a profile
             user_model = User.objects.get(username=username)
             # new_profile = Profile.objects.create(user=request.user, id_user=request.user.id)
@@ -47,7 +47,7 @@ def signup(request):
             new_profile.save()
             messages.info(request, "account created succesfully")
 
-            return redirect("signup")
+            return redirect("settings")
         except Exception as e:
             
             messages.info(request, "something went wrong")
@@ -58,10 +58,25 @@ def signup(request):
 
 
 def signin(request):
-    
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
 
-        user = authenticate(username=username,password=password)
+        user = authenticate(request,username=username,password=password)
+        print(user)
+
+        if user is not None:
+            login(request,user)
+            return redirect("index")
+        messages.info(request,"invalid credentials")
+        return redirect("signin")
     return render(request, "main/signin.html")
+
+def log_out(request):
+    logout(request)
+    return redirect("signin")
+
+
+@login_required
+def settings(request):
+    return render(request, "main/setting.html")
