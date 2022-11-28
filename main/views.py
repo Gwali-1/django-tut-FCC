@@ -8,10 +8,11 @@ from django.contrib.auth.decorators import login_required
 
 # Create your views here.
 
-from .models import User,Profile
+from .models import User,Profile,Post, LikedPost
 @login_required
 def index(request):
-    return render(request,"main/index.html")
+    user_profile = Profile.objects.get(user=request.user)
+    return render(request,"main/index.html",{"user_profile":user_profile})
 
 
 def signup(request):
@@ -39,7 +40,7 @@ def signup(request):
             #log user in and redirect to setting page 
             user = authenticate(request,username=username,password=password)
             login(request,user)
-            
+
             #give user a profile
             user_model = User.objects.get(username=username)
             # new_profile = Profile.objects.create(user=request.user, id_user=request.user.id)
@@ -72,6 +73,8 @@ def signin(request):
         return redirect("signin")
     return render(request, "main/signin.html")
 
+
+@login_required
 def log_out(request):
     logout(request)
     return redirect("signin")
@@ -79,4 +82,59 @@ def log_out(request):
 
 @login_required
 def settings(request):
-    return render(request, "main/setting.html")
+    user_profile = Profile.objects.get(user=request.user)
+
+    if request.method == "POST":
+        if not request.FILES.get("image"):
+            image = user_profile.profile
+            bio = request.POST.get("bio")
+            location = request.POST.get("location")
+
+
+            user_profile.profile = image
+            user_profile.bio = bio
+            user_profile.location = location
+            user_profile.save()
+        
+        if request.FILES.get("image"):
+            image = request.FILES.get("image")
+            bio = request.POST.get("bio")
+            location = request.POST.get("location")
+
+
+            user_profile.profile = image
+            user_profile.bio = bio
+            user_profile.location = location
+
+            user_profile.save()
+
+
+        return redirect("settings")
+
+
+    return render(request, "main/setting.html",{"user_profile":user_profile})
+
+
+
+
+def upload(request):
+
+    if request.method == "POST":
+       user=request.user.username
+       image = request.FILES.get("image_upload")
+       caption =request.POST.get("caption")
+
+
+       new_post= Post.objects.create(user=user,image=image,caption=caption)
+       new_post.save()
+       return redirect("index")
+
+    return redirect("index")
+
+
+
+
+def like_post(request): 
+    username = request.user.username
+    id = request.POST.get("id")
+    posts =Post.objects.get(id=id)
